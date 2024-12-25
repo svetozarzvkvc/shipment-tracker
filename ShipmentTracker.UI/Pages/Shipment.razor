@@ -1,0 +1,54 @@
+﻿@page "/shipment/{Id:guid}"
+@using ShipmentTracker.Application.DTO
+@using ShipmentTracker.Domain
+@using ShipmentTracker.UI.Services
+@inject ShipmentService shipmentService
+<PageTitle>Shipment details</PageTitle>
+
+<div class="container py-5">
+    <h3 class="text-center mb-4">Shipment details</h3>
+
+    @if (shipment == null)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-lg mb-4">
+            <div class="card-header myclassbg text-white">
+                <h4 class="card-title">@shipment.Name</h4>
+                <span class="badge bg-secondary">@shipment.Status</span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Id:</strong></div>
+                    <div class="col-md-8">@shipment.Id</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Created at:</strong></div>
+                    <div class="col-md-8">@shipment.DateCreated.ToString("dd.MM.yyyy")</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Delivered at:</strong></div>
+                    <div class="col-md-8">@(shipment.DeliveredAt?.ToString("dd.MM.yyyy") ?? "Not delivered")</div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private ShipmentDto shipment;
+
+    protected override async Task OnInitializedAsync()
+    {
+        shipment = await shipmentService.GetShipmentById(Id);
+    }
+}

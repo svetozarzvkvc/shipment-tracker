@@ -1,0 +1,133 @@
+﻿@page "/"
+@using ShipmentTracker.Application.DTO
+@using ShipmentTracker.Domain;
+@using ShipmentTracker.UI.Services
+@using ShipmentTracker.UI.Components
+@inject ShipmentService shipmentService
+@inject NavigationManager Navigation
+@inject FlashMessageService flashMessageService
+@inject AuthService AuthService
+<PageTitle>Home</PageTitle>
+
+
+<FlashMessage />
+
+<div class="d-flex align-items-center mb-2">
+    <input type="text" placeholder="Search by name..." class="form-control me-2" @oninput="OnSearchTextChanged" />
+    <select class="form-select" style="width: 200px;" @onchange="OnStatusChanged">
+        <option value="">All statuses</option>
+        <option value="Away">Away</option>
+        <option value="Delivered">Delivered</option>
+        <option value="Storage">Storage</option>
+    </select>
+</div>
+
+<table class="shipment-table">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Shipment name</th>
+            <th>Status</th>
+            <th>Created at</th>
+            <th>Delivered at</th>
+            <th>Actions</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (shipments.Any())
+        {
+            @foreach (var shipment in shipments)
+            {
+                <tr>
+                    <td>@shipment.Id</td>
+                    <td>@shipment.Name</td>
+                    <td>@shipment.Status</td>
+                    <td>@shipment.DateCreated.ToString("dd.MM.yyyy")</td>
+                    <td>@(shipment.DeliveredAt?.ToString("dd.MM.yyyy") ?? "Not delivered")</td>
+                    <td>
+                        <div class="btn-group" role="group" aria-label="Shipment actions">
+                            <button @onclick="() => NavigateToUpdate(shipment.Id)" class="edit-btn mybutton">Edit</button>
+                            @if (AuthService.IsAuthenticated)
+                            {
+                             <button @onclick="() => DeleteShipmentAndNavigate(shipment.Id)" class="delete-btn mybutton">Delete</button>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <button class="mybutton bg-primary">
+                            <NavLink href="@($"/shipment/{shipment.Id}")" class="text-white text-decoration-none ">Details</NavLink>
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="7" class="no-data">No shipments found.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private IEnumerable<ShipmentDto> shipments = new List<ShipmentDto>();
+    private ShipmentSearchDto search = new();
+
+    private string searchText = string.Empty;
+    private string selectedStatus = string.Empty;
+    private string successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var queryParams = Navigation.Uri.Split('?').ElementAtOrDefault(1);
+        if (queryParams != null)
+        {
+            var queryDictionary = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryParams);
+            successMessage = queryDictionary["successMessage"];
+        }
+        shipments = await shipmentService.GetAllShiplments(search);
+    }
+
+    private void NavigateToUpdate(Guid shipmentId)
+    {
+        Navigation.NavigateTo($"/update-shipment/{shipmentId}");
+    }
+
+    private async Task OnSearchTextChanged(ChangeEventArgs e)
+    {
+        searchText = e.Value.ToString();
+        search.ShipmentName = searchText;
+
+        shipments = await shipmentService.GetAllShiplments(search);
+    }
+
+    private async Task OnStatusChanged(ChangeEventArgs e)
+    {
+        selectedStatus = e.Value.ToString();
+        search.Status = Enum.TryParse<Status>(selectedStatus, out var parsedStatus) ? parsedStatus : (Status?)null;
+        shipments = await shipmentService.GetAllShiplments(search);
+    }
+
+    private async Task DeleteShipmentAndNavigate(Guid shipmentId)
+    {
+        var success = await shipmentService.DeleteShipment(shipmentId);
+        if (success)
+        {
+            await LoadShipments();
+            flashMessageService.SetMessage("Shipment deleted successfully!", "alert-success", 3000);
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            flashMessageService.SetMessage("Error deleting shipment!", "alert-error", 3000);
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task LoadShipments()
+    {
+        shipments = await shipmentService.GetAllShiplments(search);
+    }
+}

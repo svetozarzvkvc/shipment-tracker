@@ -1,0 +1,22 @@
+﻿@using ShipmentTracker.Application.DTO
+@using ShipmentTracker.Domain;
+@using ShipmentTracker.UI.Services
+@inject FlashMessageService flashMessageService
+@if (!string.IsNullOrEmpty(flashMessageService.Message))
+{
+    <div class="alert @flashMessageService.CssClass">
+        @flashMessageService.Message
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        flashMessageService.OnMessageChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        flashMessageService.OnMessageChanged -= StateHasChanged;
+    }
+}
